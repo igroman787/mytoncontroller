@@ -8,7 +8,9 @@ import requests
 import re
 import time
 import math
+import configs
 from mypylib.mypylib import *
+
 
 local = MyPyClass(__file__)
 
@@ -178,7 +180,7 @@ class MyTonCore():
 		self.tempDir = None
 		self.validatorWalletName = None
 		self.nodeName = None
-
+		self.config = configs.MTCConfig()
 		self.liteClient = LiteClient()
 		self.validatorConsole = ValidatorConsole()
 		self.fift = Fift()
@@ -2513,6 +2515,11 @@ class MyTonCore():
 	def GetHashrate(self):
 		filePath = self.tempDir + "mined.boc"
 		cpus = psutil.cpu_count()
+
+		# Override if value presented in config
+		if self.config.mining:
+			cpus = self.config.mining_threads
+
 		numThreads = "-w{cpus}".format(cpus=cpus)
 		params = self.GetPowParams('kf-kkdY_B7p-77TLn2hUhM6QidWrrsl8FYWCIvBMpZKprBtN')
 		args = ["-vv", numThreads, "-t10", 'kf-kkdY_B7p-77TLn2hUhM6QidWrrsl8FYWCIvBMpZKprBtN', params["seed"], params["complexity"], params["iterations"], 'kf-kkdY_B7p-77TLn2hUhM6QidWrrsl8FYWCIvBMpZKprBtN', filePath]
@@ -2854,6 +2861,7 @@ def Telemetry(ton):
 #end define
 
 def Mining(ton):
+	config = configs.MTCConfig()
 	powAddr = local.db.get("powAddr")
 	minerAddr = local.db.get("minerAddr")
 	miningTime = local.db.get("miningTime", 100)
@@ -2884,6 +2892,8 @@ def Mining(ton):
 	local.AddLog(powAddr, "debug")
 	filePath = ton.tempDir + "mined.boc"
 	cpus = psutil.cpu_count()-1
+	if config.mining:
+		cpus = config.mining_threads
 	params = ton.GetPowParams(powAddr)
 	args = ["-vv", "-w", cpus, "-t", miningTime, minerAddr, params["seed"], params["complexity"], params["iterations"], powAddr, filePath]
 	result = ton.miner.Run(args)
